@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-og",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Open Graph detector for Koishi",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",

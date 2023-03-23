@@ -30,7 +30,7 @@ export function apply(ctx: Context, config: Config) {
           return prev
         }, {} as Dict<string>)
         if (og.image) {
-          await session.send(h('image', { url: og.image }))
+          await session.send(h('image', { url: new URL(og.image, url).href }))
         }
       } catch {}
     })
