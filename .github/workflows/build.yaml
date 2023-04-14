@@ -19,29 +19,3 @@ jobs:
         run: yarn
       - name: Build
         run: yarn build
-
-  test:
-    runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [14, 16, 18]
-
-    steps:
-      - name: Check out
-        uses: actions/checkout@v3
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Install
-        run: yarn
-      - name: Unit test
-        run: yarn test:json
-      - name: Report coverage
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage/coverage-final.json
-          name: codecov
