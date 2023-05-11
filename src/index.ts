@@ -4,11 +4,13 @@ import { load } from 'cheerio'
 export interface Config {
   strict?: Computed<boolean>
   ignored?: string[]
+  sendTitle: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
   strict: Schema.computed(Schema.boolean()).default(false).description('仅匹配只含链接的消息。'),
   ignored: Schema.array(Schema.string()).description('忽略特定域名的链接。'),
+  sendTitle: Schema.boolean().default(false).description('同时发送标题。'),
 })
 
 export const name = 'OpenGraph'
@@ -17,7 +19,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.on('message', async (session) => {
     const regex = session.resolve(config.strict)
       ? /^https?:\/\/\S+$/g
-      : /https?:\/\/\S+/g  
+      : /https?:\/\/\S+/g
     const match = session.content.trim().match(regex)
     if (!match) return
     match.forEach(async (url) => {
@@ -32,9 +34,13 @@ export function apply(ctx: Context, config: Config) {
           if (value) prev[key] = value
           return prev
         }, {} as Dict<string>)
-        if (og.image) {
-          await session.send(h('image', { url: new URL(og.image, url).href }))
-        }
+        let message = ''
+        if (og.title && config.sendTitle)
+          message += `${og.title}`
+        if (og.image)
+          message += h('image', { url: new URL(og.image, url).href })
+        if (message !== '')
+          await session.send(message)
       } catch {}
     })
   })
