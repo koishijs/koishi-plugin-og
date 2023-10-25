@@ -38,7 +38,7 @@ export function apply(ctx: Context, config: Config) {
         if (og.title && config.sendTitle)
           message += `${og.title}`
         if (og.image)
-          message += h('image', { url: new URL(og.image, url).href })
+          message += h('image', { url: new URL(og.image.startsWith('//') ? `https:${og.image}` : og.image, url).href })
         if (message !== '')
           await session.send(message)
       } catch {}
