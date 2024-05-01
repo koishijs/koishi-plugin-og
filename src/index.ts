@@ -1,4 +1,4 @@
-import { Computed, Context, Dict, h, Logger, Schema } from 'koishi'
+import { Computed, Context, Dict, h, Schema } from 'koishi'
 import { load } from 'cheerio'
 
 export interface Config {
@@ -14,7 +14,7 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export const name = 'OpenGraph'
-//const logger = new Logger('OpenGraph')
+
 export function apply(ctx: Context, config: Config) {
   ctx.on('message', async (session) => {
     const regex = session.resolve(config.strict)
@@ -22,6 +22,7 @@ export function apply(ctx: Context, config: Config) {
       : /https?:\/\/\S+/g
     const match = session.content.trim().match(regex)
     if (!match) return
+
     match.forEach(async (url) => {
       if (config.ignored?.some((prefix) => url.startsWith(prefix))) return
       try {
@@ -31,6 +32,7 @@ export function apply(ctx: Context, config: Config) {
           return { body, headers }
         })
         if (!headers.get('content-type')?.startsWith('text/html')) return
+        
         const $ = load(body)
         const og = $('meta[property^="og:"]').toArray().reduce((prev, meta) => {
           const key = meta.attribs.property.slice(3)
