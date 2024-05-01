@@ -1,4 +1,4 @@
-import { Computed, Context, Dict, h, Schema } from 'koishi'
+import { Computed, Context, Dict, h, Logger, Schema } from 'koishi'
 import { load } from 'cheerio'
 
 export interface Config {
@@ -14,7 +14,7 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export const name = 'OpenGraph'
-
+//const logger = new Logger('OpenGraph')
 export function apply(ctx: Context, config: Config) {
   ctx.on('message', async (session) => {
     const regex = session.resolve(config.strict)
@@ -25,9 +25,13 @@ export function apply(ctx: Context, config: Config) {
     match.forEach(async (url) => {
       if (config.ignored?.some((prefix) => url.startsWith(prefix))) return
       try {
-        const { data, headers } = await ctx.http.axios(url)
-        if (!headers['content-type']?.startsWith('text/html')) return
-        const $ = load(data)
+        const { body, headers } = await fetch(url).then(async response => {
+          const body = await response.text()
+          const headers = response.headers
+          return { body, headers }
+        })
+        if (!headers.get('content-type')?.startsWith('text/html')) return
+        const $ = load(body)
         const og = $('meta[property^="og:"]').toArray().reduce((prev, meta) => {
           const key = meta.attribs.property.slice(3)
           const value = meta.attribs.content
@@ -38,7 +42,7 @@ export function apply(ctx: Context, config: Config) {
         if (og.title && config.sendTitle)
           message += `${og.title}`
         if (og.image)
-          message += h('image', { url: new URL(og.image, url).href })
+          message += h('img', { src: new URL(og.image, url).href })
         if (message !== '')
           await session.send(message)
       } catch {}
