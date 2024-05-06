@@ -5,12 +5,14 @@ export interface Config {
   strict?: Computed<boolean>
   ignored?: string[]
   sendTitle: boolean
+  sendSiteNameIfNecessary: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
   strict: Schema.computed(Schema.boolean()).default(false).description('仅匹配只含链接的消息。'),
   ignored: Schema.array(Schema.string()).description('忽略特定域名的链接。'),
   sendTitle: Schema.boolean().default(false).description('同时发送标题。'),
+  sendSiteNameIfNecessary: Schema.boolean().default(false).description('标题不包含站点名的话，就发送站点名。')
 })
 
 export const name = 'OpenGraph'
@@ -41,6 +43,8 @@ export function apply(ctx: Context, config: Config) {
           return prev
         }, {} as Dict<string>)
         let message = ''
+        if (og.site_name && config.sendSiteNameIfNecessary && !og.title.toLowerCase().includes(og.site_name.toLowerCase()))
+          message += `${og.site_name}: `;
         if (og.title && config.sendTitle)
           message += `${og.title}`
         if (og.image)
