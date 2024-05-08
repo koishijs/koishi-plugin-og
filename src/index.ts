@@ -5,14 +5,14 @@ export interface Config {
   strict?: Computed<boolean>
   ignored?: string[]
   sendTitle: boolean
-  sendSiteNameIfNecessary: boolean
+  sendSiteName: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
   strict: Schema.computed(Schema.boolean()).default(false).description('仅匹配只含链接的消息。'),
   ignored: Schema.array(Schema.string()).description('忽略特定域名的链接。'),
   sendTitle: Schema.boolean().default(false).description('同时发送标题。'),
-  sendSiteNameIfNecessary: Schema.boolean().default(false).description('标题不包含站点名的话，就发送站点名。')
+  sendSiteName: Schema.boolean().default(false).description('标题不包含站点名的话，就发送站点名。'),
 })
 
 export const name = 'OpenGraph'
@@ -28,14 +28,10 @@ export function apply(ctx: Context, config: Config) {
     match.forEach(async (url) => {
       if (config.ignored?.some((prefix) => url.startsWith(prefix))) return
       try {
-        const { body, headers } = await fetch(url).then(async response => {
-          const body = await response.text()
-          const headers = response.headers
-          return { body, headers }
-        })
+        const { data, headers } = await ctx.http(url, { responseType: 'text' })
         if (!headers.get('content-type')?.startsWith('text/html')) return
-        
-        const $ = load(body)
+
+        const $ = load(data)
         const og = $('meta[property^="og:"]').toArray().reduce((prev, meta) => {
           const key = meta.attribs.property.slice(3)
           const value = meta.attribs.content
@@ -43,8 +39,8 @@ export function apply(ctx: Context, config: Config) {
           return prev
         }, {} as Dict<string>)
         let message = ''
-        if (og.site_name && config.sendSiteNameIfNecessary && !og.title.toLowerCase().includes(og.site_name.toLowerCase()))
-          message += `${og.site_name}: `;
+        if (og.site_name && config.sendSiteName && !og.title.toLowerCase().includes(og.site_name.toLowerCase()))
+          message += `${og.site_name}: `
         if (og.title && config.sendTitle)
           message += `${og.title}`
         if (og.image)
