@@ -28,24 +28,25 @@ export function apply(ctx: Context, config: Config) {
     if (!match) return
 
     logger.debug('提取出的链接：', match)
-    let message = ''
-    match.forEach(async (url: string) => {
-      if (config.ignored?.some((prefix) => url.startsWith(prefix))) return
+
+    const promises: Promise<string>[] = match.map(async (url: string) => {
+      if (config.ignored?.some((prefix) => url.startsWith(prefix))) return '' // 这行实现了：忽略特定域名的链接
       try {
         const { data, headers } = await ctx.http(url, { responseType: 'text' })
         if (!headers.get('content-type')?.startsWith('text/html')) {
           logger.debug(`从 ${url} 上抓取下来的数据的 content-type 不是 text/html。终止对该链接的处理流程。`)
-          return
+          return ''
         }
 
         const $ = load(data)
         const og = $('meta[property^="og:"]').toArray().reduce((prev, meta) => {
-          const key = meta.attribs.property.slice(3)
+          const key = meta.attribs.property.slice(3) //假设meta.attribs.property的值为"og:image"，那么slice(3)操作后得到的key值就是"image"。这一操作是为了去掉前缀"og:"，只保留实际的内容标识。
           const value = meta.attribs.content
           if (value) prev[key] = value
           return prev
         }, {} as Dict<string>)
-        let ogblock = ''
+
+        let ogblock: string = ''
         if (og.site_name && config.sendSiteName && !og.title.toLowerCase().includes(og.site_name.toLowerCase()) && !(new URL(url)).host.toLowerCase().includes(og.site_name.toLowerCase()))
           ogblock += `${og.site_name} - `
         if (og.title && config.sendTitle)
@@ -53,10 +54,17 @@ export function apply(ctx: Context, config: Config) {
         if (og.image)
           ogblock += h('img', { src: new URL(og.image, url).href })
         logger.debug(`从 ${url} 生成了预览：${ogblock}`)
-        if (ogblock !== '')
-          message += `${ogblock}\n`
-      } catch {}
-    })
+        return ogblock
+      } catch (error) {
+        logger.warn(`处理 ${url} 时出错：`, error)
+        return ''
+      }
+    }
+    )
+
+    const results = await Promise.all(promises) // 等待所有 promise 完成
+    const message = results.filter(result => result).join('\n') // 合并结果，过滤掉空字符串
+    logger.debug(`发送：${message}`)
     await session.send(message)
   })
 }
