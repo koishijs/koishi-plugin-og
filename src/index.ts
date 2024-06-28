@@ -30,7 +30,7 @@ export function apply(ctx: Context, config: Config) {
     logger.debug('提取出的链接：', match)
 
     const promises: Promise<string>[] = match.map(async (url: string) => {
-      if (config.ignored?.some((prefix) => url.startsWith(prefix))) return '' // 这行实现了：忽略特定域名的链接
+      if (config.ignored?.some((prefix) => url.startsWith(prefix))) return ''
       try {
         const { data, headers } = await ctx.http(url, { responseType: 'text' })
         if (!headers.get('content-type')?.startsWith('text/html')) {
